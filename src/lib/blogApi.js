@@ -31,9 +31,14 @@ async function request(path, options = {}) {
       ...options,
     });
   } catch {
-    throw new Error('API server is not reachable. Start the backend with `npm run dev`.');
+    throw new Error(
+      import.meta.env.DEV
+        ? 'API server is not reachable. Start the backend with `npm run dev`.'
+        : 'API server is not reachable. Check the Vercel deployment logs and environment variables.',
+    );
   }
 
+  const contentType = response.headers.get('content-type') ?? '';
   const text = await response.text();
   let payload = null;
 
@@ -46,6 +51,12 @@ async function request(path, options = {}) {
   }
 
   if (!response.ok) {
+    if (response.status === 404 && contentType.includes('text/html')) {
+      throw new Error(
+        'API route `/api/blogs` is not available in this deployment. Verify the Vercel function is deployed.',
+      );
+    }
+
     throw new Error(payload?.error || 'Request failed.');
   }
 
